@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Putting Scoring</title>
+<style>
+  :root {
+    --bg: #f4f6f5;
+    --surface: #ffffff;
+    --surface-alt: #eef1f0;
+    --text: #1c1c1e;
+    --text-secondary: #6b7280;
+    --primary: #1f8a4c;
+    --primary-text: #ffffff;
+    --danger: #d64545;
+    --danger-text: #ffffff;
+    --border: #e2e5e4;
+    --under: #1f8a4c;
+    --over: #d64545;
+    --even: #6b7280;
+    --selected-bg: #1f8a4c;
+    --selected-text: #ffffff;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d0e0e;
+      --surface: #1c1d1e;
+      --surface-alt: #232425;
+      --text: #f2f2f2;
+      --text-secondary: #9aa0a6;
+      --primary: #34c471;
+      --primary-text: #05170c;
+      --danger: #ff6b6b;
+      --danger-text: #2a0707;
+      --border: #2e2f30;
+      --under: #34c471;
+      --over: #ff6b6b;
+      --even: #9aa0a6;
+      --selected-bg: #34c471;
+      --selected-text: #05170c;
+      --shadow: 0 1px 3px rgba(0,0,0,0.4);
+    }
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    height: 100%;
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", Helvetica, Arial, sans-serif;
+    overscroll-behavior-y: none;
+  }
+  body { touch-action: manipulation; }
+  #app { height: 100dvh; }
+
+  button { font-family: inherit; }
+
+  .screen {
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+  }
+
+  .app-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: calc(env(safe-area-inset-top) + 14px) 16px 14px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .app-header h1 {
+    font-size: 20px;
+    margin: 0;
+    font-weight: 700;
+  }
+  .header-info { display: flex; flex-direction: column; gap: 2px; }
+  .header-sub { font-size: 13px; color: var(--text-secondary); }
+
+  .btn-icon {
+    background: none;
+    border: none;
+    font-size: 22px;
+    color: var(--text);
+    padding: 4px 8px;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .scroll-area {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 16px;
+  }
+
+  .center-content {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 12px;
+  }
+
+  .app-footer {
+    flex-shrink: 0;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding: 14px 16px calc(env(safe-area-inset-bottom) + 14px);
+  }
+
+  .btn {
+    appearance: none;
+    border: none;
+    border-radius: 14px;
+    padding: 16px;
+    font-size: 17px;
+    font-weight: 600;
+    cursor: pointer;
+    min-height: 52px;
+  }
+  .btn-block { width: 100%; display: block; }
+  .btn-large { margin-bottom: 12px; }
+  .btn-primary { background: var(--primary); color: var(--primary-text); }
+  .btn-secondary { background: var(--surface-alt); color: var(--text); }
+  .btn-danger { background: transparent; color: var(--danger); border: 1.5px solid var(--danger); }
+
+  .setup-prompt {
+    text-align: center;
+    color: var(--text-secondary);
+    margin: 0 0 16px;
+    font-size: 15px;
+  }
+
+  .empty-state {
+    color: var(--text-secondary);
+    text-align: center;
+    margin-top: 48px;
+    font-size: 15px;
+  }
+
+  .round-list { display: flex; flex-direction: column; gap: 10px; }
+  .round-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px 16px;
+    box-shadow: var(--shadow);
+    cursor: pointer;
+    text-align: left;
+  }
+  .round-item-main { display: flex; flex-direction: column; gap: 4px; }
+  .round-date { font-size: 16px; font-weight: 600; color: var(--text); }
+  .round-dir { font-size: 13px; color: var(--text-secondary); }
+  .round-item-score { display: flex; align-items: baseline; gap: 10px; }
+  .score-total { font-size: 20px; font-weight: 700; }
+  .score-diff { font-size: 15px; font-weight: 700; min-width: 28px; text-align: right; }
+
+  .diff-under { color: var(--under); }
+  .diff-over { color: var(--over); }
+  .diff-even { color: var(--even); }
+
+  .hole-list { display: flex; flex-direction: column; gap: 10px; }
+  .hole-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 10px 12px;
+  }
+  .hole-label {
+    font-size: 15px;
+    font-weight: 700;
+    width: 46px;
+    flex-shrink: 0;
+    color: var(--text-secondary);
+  }
+  .stroke-buttons {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+    flex: 1;
+  }
+  .stroke-btn {
+    appearance: none;
+    border: 1.5px solid var(--border);
+    background: var(--surface-alt);
+    color: var(--text);
+    border-radius: 10px;
+    height: 46px;
+    font-size: 17px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .stroke-btn.selected {
+    background: var(--selected-bg);
+    border-color: var(--selected-bg);
+    color: var(--selected-text);
+  }
+  .stroke-btn:disabled {
+    opacity: 1;
+    cursor: default;
+  }
+  .stroke-btn:disabled:not(.selected) {
+    opacity: 0.4;
+  }
+
+  .round-footer { padding-top: 12px; }
+  .summary-row {
+    display: flex;
+    justify-content: space-around;
+    padding-bottom: 12px;
+    margin-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .summary-item { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .summary-value { font-size: 20px; font-weight: 700; }
+  .summary-label { font-size: 12px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.03em; }
+
+  .footer-actions { display: flex; gap: 10px; }
+  .footer-actions .btn { flex: 1; }
+
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    z-index: 10;
+    padding: 16px;
+    padding-bottom: calc(env(safe-area-inset-bottom) + 16px);
+  }
+  .modal-box {
+    background: var(--surface);
+    border-radius: 16px;
+    padding: 20px;
+    width: 100%;
+    max-width: 420px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+  }
+  .modal-message {
+    font-size: 16px;
+    margin: 0 0 16px;
+    text-align: center;
+  }
+  .modal-actions { display: flex; flex-direction: column; gap: 10px; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+  var STORAGE_KEY = 'puttingRounds_v1';
+  var ACTIVE_KEY = 'puttingActiveRound_v1';
+  var PAR_PER_HOLE = 2;
+
+  function loadRounds() {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+    catch (e) { return []; }
+  }
+  function saveRounds(rounds) { localStorage.setItem(STORAGE_KEY, JSON.stringify(rounds)); }
+  function loadActive() {
+    try { return JSON.parse(localStorage.getItem(ACTIVE_KEY)) || null; }
+    catch (e) { return null; }
+  }
+  function saveActive(round) { localStorage.setItem(ACTIVE_KEY, JSON.stringify(round)); }
+  function clearActive() { localStorage.removeItem(ACTIVE_KEY); }
+
+  function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+
+  var rounds = loadRounds();
+  var activeRound = loadActive();
+  var screen = activeRound ? 'active' : 'list';
+  var viewingId = null;
+  var confirmState = null;
+
+  function summarize(round) {
+    var scored = round.holes.filter(function (h) { return h.strokes != null; });
+    var total = scored.reduce(function (s, h) { return s + h.strokes; }, 0);
+    var parSoFar = scored.length * PAR_PER_HOLE;
+    return { scoredCount: scored.length, total: total, diff: total - parSoFar };
+  }
+
+  function diffClass(diff) {
+    if (diff < 0) return 'diff-under';
+    if (diff > 0) return 'diff-over';
+    return 'diff-even';
+  }
+
+  function diffLabel(diff) {
+    if (diff === 0) return 'E';
+    return diff > 0 ? ('+' + diff) : String(diff);
+  }
+
+  function formatDateTime(iso) {
+    var d = new Date(iso);
+    var datePart = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    var timePart = d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+    return datePart + ' · ' + timePart;
+  }
+
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function render() {
+    var app = document.getElementById('app');
+    var html = '';
+    if (screen === 'list') html = renderList();
+    else if (screen === 'setup') html = renderSetup();
+    else if (screen === 'active') html = activeRound ? renderRound(activeRound, false) : renderList();
+    else if (screen === 'view') {
+      var r = rounds.find(function (x) { return x.id === viewingId; });
+      html = r ? renderRound(r, true) : renderList();
+    }
+    app.innerHTML = html + (confirmState ? renderConfirm() : '');
+  }
+
+  function renderList() {
+    var sorted = rounds.slice().sort(function (a, b) {
+      return new Date(b.completedTime) - new Date(a.completedTime);
+    });
+    var items = sorted.map(function (r) {
+      var s = summarize(r);
+      return '' +
+        '<button class="round-item" onclick="openView(\'' + r.id + '\')">' +
+          '<div class="round-item-main">' +
+            '<span class="round-date">' + formatDateTime(r.startTime) + '</span>' +
+            '<span class="round-dir">' + (r.direction === 'forward' ? 'Forward · 1 → 9' : 'Backward · 9 → 1') + '</span>' +
+          '</div>' +
+          '<div class="round-item-score">' +
+            '<span class="score-total">' + s.total + '</span>' +
+            '<span class="score-diff ' + diffClass(s.diff) + '">' + diffLabel(s.diff) + '</span>' +
+          '</div>' +
+        '</button>';
+    }).join('');
+
+    return '' +
+      '<div class="screen">' +
+        '<header class="app-header"><h1>Putting Rounds</h1></header>' +
+        '<main class="scroll-area">' +
+          (sorted.length ? '<div class="round-list">' + items + '</div>' : '<p class="empty-state">No completed rounds yet.<br>Start a round to begin tracking.</p>') +
+        '</main>' +
+        '<footer class="app-footer">' +
+          '<button class="btn btn-primary btn-block" onclick="startSetup()">Start Round</button>' +
+        '</footer>' +
+      '</div>';
+  }
+
+  function renderSetup() {
+    return '' +
+      '<div class="screen">' +
+        '<header class="app-header">' +
+          '<button class="btn-icon" onclick="backToList()" aria-label="Back">←</button>' +
+          '<h1>New Round</h1>' +
+        '</header>' +
+        '<main class="scroll-area center-content">' +
+          '<p class="setup-prompt">Choose direction</p>' +
+          '<button class="btn btn-primary btn-block btn-large" onclick="beginRound(\'forward\')">Forward · 1 → 9</button>' +
+          '<button class="btn btn-primary btn-block btn-large" onclick="beginRound(\'backward\')">Backward · 9 → 1</button>' +
+        '</main>' +
+      '</div>';
+  }
+
+  function renderRound(round, readOnly) {
+    var s = summarize(round);
+    var holesHtml = round.holes.map(function (h, idx) {
+      var btns = [1, 2, 3, 4, 5].map(function (n) {
+        var selected = h.strokes === n;
+        var attrs = readOnly ? 'disabled' : ('onclick="setStrokes(' + idx + ', ' + n + ')"');
+        return '<button class="stroke-btn' + (selected ? ' selected' : '') + '" ' + attrs + '>' + n + '</button>';
+      }).join('');
+      return '' +
+        '<div class="hole-row">' +
+          '<div class="hole-label">Hole ' + h.number + '</div>' +
+          '<div class="stroke-buttons">' + btns + '</div>' +
+        '</div>';
+    }).join('');
+
+    var headerLeft = readOnly
+      ? '<button class="btn-icon" onclick="backToList()" aria-label="Close">✕</button>'
+      : '';
+
+    var footerActions = readOnly
+      ? ('<button class="btn btn-danger" onclick="confirmDeleteCompleted(\'' + round.id + '\')">Delete</button>' +
+         '<button class="btn btn-primary" onclick="backToList()">Close</button>')
+      : ('<button class="btn btn-danger" onclick="confirmDeleteActive()">Delete</button>' +
+         '<button class="btn btn-primary" onclick="confirmComplete()">Complete</button>');
+
+    return '' +
+      '<div class="screen">' +
+        '<header class="app-header">' +
+          headerLeft +
+          '<div class="header-info">' +
+            '<h1>' + (round.direction === 'forward' ? 'Forward · 1 → 9' : 'Backward · 9 → 1') + '</h1>' +
+            '<span class="header-sub">Started ' + formatDateTime(round.startTime) + '</span>' +
+          '</div>' +
+        '</header>' +
+        '<main class="scroll-area">' +
+          '<div class="hole-list">' + holesHtml + '</div>' +
+        '</main>' +
+        '<footer class="app-footer round-footer">' +
+          '<div class="summary-row">' +
+            '<div class="summary-item"><span class="summary-value">' + s.scoredCount + '/9</span><span class="summary-label">Holes</span></div>' +
+            '<div class="summary-item"><span class="summary-value">' + s.total + '</span><span class="summary-label">Strokes</span></div>' +
+            '<div class="summary-item"><span class="summary-value ' + diffClass(s.diff) + '">' + diffLabel(s.diff) + '</span><span class="summary-label">Par</span></div>' +
+          '</div>' +
+          '<div class="footer-actions">' + footerActions + '</div>' +
+        '</footer>' +
+      '</div>';
+  }
+
+  function renderConfirm() {
+    return '' +
+      '<div class="modal-overlay">' +
+        '<div class="modal-box">' +
+          '<p class="modal-message">' + escapeHtml(confirmState.message) + '</p>' +
+          '<div class="modal-actions">' +
+            '<button class="btn btn-danger btn-block" onclick="closeConfirm(true)">Confirm</button>' +
+            '<button class="btn btn-secondary btn-block" onclick="closeConfirm(false)">Cancel</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+  }
+
+  function startSetup() { screen = 'setup'; render(); }
+
+  function beginRound(direction) {
+    var order = direction === 'forward' ? [1, 2, 3, 4, 5, 6, 7, 8, 9] : [9, 8, 7, 6, 5, 4, 3, 2, 1];
+    activeRound = {
+      id: genId(),
+      direction: direction,
+      startTime: new Date().toISOString(),
+      completedTime: null,
+      holes: order.map(function (n) { return { number: n, strokes: null }; })
+    };
+    saveActive(activeRound);
+    screen = 'active';
+    render();
+  }
+
+  function setStrokes(idx, n) {
+    if (!activeRound) return;
+    activeRound.holes[idx].strokes = n;
+    saveActive(activeRound);
+    render();
+  }
+
+  function confirmComplete() {
+    showConfirm('Complete this round and save it?', doComplete);
+  }
+  function doComplete() {
+    activeRound.completedTime = new Date().toISOString();
+    rounds.push(activeRound);
+    saveRounds(rounds);
+    clearActive();
+    activeRound = null;
+    screen = 'list';
+    render();
+  }
+
+  function confirmDeleteActive() {
+    showConfirm('Delete this round? This cannot be undone.', doDeleteActive);
+  }
+  function doDeleteActive() {
+    clearActive();
+    activeRound = null;
+    screen = 'list';
+    render();
+  }
+
+  function confirmDeleteCompleted(id) {
+    showConfirm('Delete this round? This cannot be undone.', function () { doDeleteCompleted(id); });
+  }
+  function doDeleteCompleted(id) {
+    rounds = rounds.filter(function (r) { return r.id !== id; });
+    saveRounds(rounds);
+    viewingId = null;
+    screen = 'list';
+    render();
+  }
+
+  function openView(id) { viewingId = id; screen = 'view'; render(); }
+  function backToList() { screen = 'list'; viewingId = null; render(); }
+
+  function showConfirm(message, onConfirm) {
+    confirmState = { message: message, onConfirm: onConfirm };
+    render();
+  }
+  function closeConfirm(confirmed) {
+    var cb = confirmState && confirmState.onConfirm;
+    confirmState = null;
+    if (confirmed && cb) cb();
+    else render();
+  }
+
+  render();
+</script>
+</body>
+</html>
