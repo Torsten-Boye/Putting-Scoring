@@ -162,6 +162,7 @@
   .round-date { font-size: 16px; font-weight: 600; color: var(--text); }
   .round-dir { font-size: 13px; color: var(--text-secondary); }
   .round-item-score { display: flex; align-items: baseline; gap: 10px; }
+  .hio-badge { font-size: 13px; font-weight: 700; color: var(--primary); white-space: nowrap; }
   .score-total { font-size: 20px; font-weight: 700; color: #ffffff; }
   .score-diff { font-size: 15px; font-weight: 700; min-width: 28px; text-align: right; }
 
@@ -178,6 +179,10 @@
     border: 1px solid var(--border);
     border-radius: 14px;
     padding: 10px 12px;
+  }
+  .hole-row.hole-in-one {
+    border: 2px solid var(--primary);
+    padding: 9px 11px;
   }
   .hole-label {
     display: flex;
@@ -308,6 +313,10 @@
     return { scoredCount: scored.length, total: total, diff: total - parSoFar };
   }
 
+  function countAces(round) {
+    return round.holes.filter(function (h) { return h.strokes === 1; }).length;
+  }
+
   function diffClass(diff) {
     if (diff < 0) return 'diff-under';
     if (diff > 0) return 'diff-over';
@@ -355,6 +364,7 @@
     });
     var items = sorted.map(function (r) {
       var s = summarize(r);
+      var aces = countAces(r);
       return '' +
         '<button class="round-item" onclick="openView(\'' + r.id + '\')">' +
           '<div class="round-item-main">' +
@@ -362,6 +372,7 @@
             '<span class="round-dir">' + (r.direction === 'forward' ? 'Forward · 1 → 9' : 'Backward · 9 → 1') + '</span>' +
           '</div>' +
           '<div class="round-item-score">' +
+            (aces > 0 ? '<span class="hio-badge">🕳️ ×' + aces + '</span>' : '') +
             '<span class="score-total">' + s.total + '</span>' +
             '<span class="score-diff ' + diffClass(s.diff) + '">' + diffLabel(s.diff) + '</span>' +
           '</div>' +
@@ -404,7 +415,7 @@
         return '<button class="stroke-btn' + (selected ? ' selected' : '') + '" ' + attrs + '>' + n + '</button>';
       }).join('');
       return '' +
-        '<div class="hole-row">' +
+        '<div class="hole-row' + (h.strokes === 1 ? ' hole-in-one' : '') + '">' +
           '<div class="hole-label"><span class="hole-label-word">Hole</span><span class="hole-label-number">' + h.number + '</span></div>' +
           '<div class="stroke-buttons">' + btns + '</div>' +
         '</div>';
