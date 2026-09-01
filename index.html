@@ -162,7 +162,7 @@
   .round-date { font-size: 16px; font-weight: 600; color: var(--text); }
   .round-dir { font-size: 13px; color: var(--text-secondary); }
   .round-item-score { display: flex; align-items: baseline; gap: 10px; }
-  .score-total { font-size: 20px; font-weight: 700; }
+  .score-total { font-size: 20px; font-weight: 700; color: #ffffff; }
   .score-diff { font-size: 15px; font-weight: 700; min-width: 28px; text-align: right; }
 
   .diff-under { color: var(--under); }
@@ -180,11 +180,26 @@
     padding: 10px 12px;
   }
   .hole-label {
-    font-size: 15px;
-    font-weight: 700;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    line-height: 1.2;
     width: 46px;
     flex-shrink: 0;
     color: var(--text-secondary);
+  }
+  .hole-label-word {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .hole-label-number {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
   }
   .stroke-buttons {
     display: grid;
@@ -327,7 +342,11 @@
       var r = rounds.find(function (x) { return x.id === viewingId; });
       html = r ? renderRound(r, true) : renderList();
     }
+    var prevScroll = app.querySelector('.scroll-area');
+    var scrollTop = prevScroll ? prevScroll.scrollTop : 0;
     app.innerHTML = html + (confirmState ? renderConfirm() : '');
+    var nextScroll = app.querySelector('.scroll-area');
+    if (nextScroll) nextScroll.scrollTop = scrollTop;
   }
 
   function renderList() {
@@ -386,7 +405,7 @@
       }).join('');
       return '' +
         '<div class="hole-row">' +
-          '<div class="hole-label">Hole ' + h.number + '</div>' +
+          '<div class="hole-label"><span class="hole-label-word">Hole</span><span class="hole-label-number">' + h.number + '</span></div>' +
           '<div class="stroke-buttons">' + btns + '</div>' +
         '</div>';
     }).join('');
