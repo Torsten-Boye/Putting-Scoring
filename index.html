@@ -83,6 +83,13 @@
   .header-info { display: flex; flex-direction: column; gap: 2px; }
   .header-sub { font-size: 13px; color: var(--text-secondary); }
 
+  .app-header.round-header {
+    padding: calc(env(safe-area-inset-top) + 8px) 16px 8px;
+    gap: 8px;
+  }
+  .app-header.round-header h1 { font-size: 16px; }
+  .app-header.round-header .header-sub { font-size: 11px; }
+
   .btn-icon {
     background: none;
     border: none;
@@ -132,9 +139,9 @@
   .btn:disabled { opacity: 0.4; cursor: default; }
 
   .footer-hint {
-    margin: 0 0 10px;
+    margin: 0 0 6px;
     text-align: center;
-    font-size: 13px;
+    font-size: 11px;
     color: var(--text-secondary);
   }
 
@@ -178,19 +185,20 @@
   .diff-over { color: var(--over); }
   .diff-even { color: var(--even); }
 
-  .hole-list { display: flex; flex-direction: column; gap: 10px; }
+  .round-scroll { padding: 8px 14px; }
+  .hole-list { display: flex; flex-direction: column; gap: 5px; }
   .hole-row {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 10px 12px;
+    border-radius: 10px;
+    padding: 5px 8px;
   }
   .hole-row.hole-in-one {
     border: 2px solid var(--primary);
-    padding: 9px 11px;
+    padding: 4px 7px;
   }
   .hole-label {
     display: flex;
@@ -198,26 +206,26 @@
     align-items: center;
     justify-content: center;
     text-align: center;
-    line-height: 1.2;
-    width: 46px;
+    line-height: 1.1;
+    width: 34px;
     flex-shrink: 0;
     color: var(--text-secondary);
   }
   .hole-label-word {
-    font-size: 11px;
+    font-size: 8px;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.03em;
+    letter-spacing: 0.02em;
   }
   .hole-label-number {
-    font-size: 18px;
+    font-size: 14px;
     font-weight: 700;
     color: var(--text);
   }
   .stroke-buttons {
     display: grid;
     grid-template-columns: repeat(6, 1fr);
-    gap: 5px;
+    gap: 4px;
     flex: 1;
   }
   .stroke-btn {
@@ -225,9 +233,9 @@
     border: 1.5px solid var(--border);
     background: var(--surface-alt);
     color: var(--text);
-    border-radius: 10px;
-    height: 46px;
-    font-size: 17px;
+    border-radius: 8px;
+    height: 34px;
+    font-size: 14px;
     font-weight: 700;
     cursor: pointer;
   }
@@ -244,20 +252,24 @@
     opacity: 0.4;
   }
 
-  .round-footer { padding-top: 12px; }
+  .round-footer {
+    padding-top: 6px;
+    padding-bottom: calc(env(safe-area-inset-bottom) + 8px);
+  }
   .summary-row {
     display: flex;
     justify-content: space-around;
-    padding-bottom: 12px;
-    margin-bottom: 12px;
+    padding-bottom: 6px;
+    margin-bottom: 6px;
     border-bottom: 1px solid var(--border);
   }
-  .summary-item { display: flex; flex-direction: column; align-items: center; gap: 2px; }
-  .summary-value { font-size: 20px; font-weight: 700; }
-  .summary-label { font-size: 12px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.03em; }
+  .summary-item { display: flex; flex-direction: column; align-items: center; gap: 1px; }
+  .summary-value { font-size: 16px; font-weight: 700; }
+  .summary-label { font-size: 9px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.03em; }
 
-  .footer-actions { display: flex; gap: 10px; }
+  .footer-actions { display: flex; gap: 8px; }
   .footer-actions .btn { flex: 1; }
+  .round-footer .btn { min-height: 40px; padding: 10px; font-size: 15px; }
 
   .modal-overlay {
     position: fixed;
@@ -465,14 +477,14 @@
 
     return '' +
       '<div class="screen">' +
-        '<header class="app-header">' +
+        '<header class="app-header round-header">' +
           headerLeft +
           '<div class="header-info">' +
             '<h1>' + roundTypeLabel(round) + '</h1>' +
             '<span class="header-sub">Started ' + formatDateTime(round.startTime) + '</span>' +
           '</div>' +
         '</header>' +
-        '<main class="scroll-area">' +
+        '<main class="scroll-area round-scroll">' +
           '<div class="hole-list">' + holesHtml + '</div>' +
         '</main>' +
         '<footer class="app-footer round-footer">' +
