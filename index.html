@@ -345,7 +345,8 @@
     var app = document.getElementById('app');
     var html = '';
     if (screen === 'list') html = renderList();
-    else if (screen === 'setup') html = renderSetup();
+    else if (screen === 'setupType') html = renderSetupType();
+    else if (screen === 'setupDirection') html = renderSetupDirection();
     else if (screen === 'active') html = activeRound ? renderRound(activeRound, false) : renderList();
     else if (screen === 'view') {
       var r = rounds.find(function (x) { return x.id === viewingId; });
@@ -369,7 +370,7 @@
         '<button class="round-item" onclick="openView(\'' + r.id + '\')">' +
           '<div class="round-item-main">' +
             '<span class="round-date">' + formatDateTime(r.startTime) + '</span>' +
-            '<span class="round-dir">' + (r.direction === 'forward' ? 'Forward · 1 → 9' : 'Backward · 9 → 1') + '</span>' +
+            '<span class="round-dir">' + roundTypeLabel(r) + '</span>' +
           '</div>' +
           '<div class="round-item-score">' +
             (aces > 0 ? '<span class="hio-badge">🕳️ ×' + aces + '</span>' : '') +
@@ -381,7 +382,7 @@
 
     return '' +
       '<div class="screen">' +
-        '<header class="app-header"><h1>Putting Rounds</h1></header>' +
+        '<header class="app-header"><h1>Training Rounds</h1></header>' +
         '<main class="scroll-area">' +
           (sorted.length ? '<div class="round-list">' + items + '</div>' : '<p class="empty-state">No completed rounds yet.<br>Start a round to begin tracking.</p>') +
         '</main>' +
@@ -391,7 +392,13 @@
       '</div>';
   }
 
-  function renderSetup() {
+  function roundTypeLabel(round) {
+    var type = round.type || 'putting';
+    if (type === 'chipping') return 'Chipping';
+    return 'Putting · ' + (round.direction === 'backward' ? 'Backward · 9 → 1' : 'Forward · 1 → 9');
+  }
+
+  function renderSetupType() {
     return '' +
       '<div class="screen">' +
         '<header class="app-header">' +
@@ -399,9 +406,24 @@
           '<h1>New Round</h1>' +
         '</header>' +
         '<main class="scroll-area center-content">' +
+          '<p class="setup-prompt">Choose training type</p>' +
+          '<button class="btn btn-primary btn-block btn-large" onclick="chooseType(\'putting\')">Putting</button>' +
+          '<button class="btn btn-primary btn-block btn-large" onclick="chooseType(\'chipping\')">Chipping</button>' +
+        '</main>' +
+      '</div>';
+  }
+
+  function renderSetupDirection() {
+    return '' +
+      '<div class="screen">' +
+        '<header class="app-header">' +
+          '<button class="btn-icon" onclick="backToSetupType()" aria-label="Back">←</button>' +
+          '<h1>New Round</h1>' +
+        '</header>' +
+        '<main class="scroll-area center-content">' +
           '<p class="setup-prompt">Choose direction</p>' +
-          '<button class="btn btn-primary btn-block btn-large" onclick="beginRound(\'forward\')">Forward · 1 → 9</button>' +
-          '<button class="btn btn-primary btn-block btn-large" onclick="beginRound(\'backward\')">Backward · 9 → 1</button>' +
+          '<button class="btn btn-primary btn-block btn-large" onclick="beginRound(\'putting\', \'forward\')">Forward · 1 → 9</button>' +
+          '<button class="btn btn-primary btn-block btn-large" onclick="beginRound(\'putting\', \'backward\')">Backward · 9 → 1</button>' +
         '</main>' +
       '</div>';
   }
@@ -416,7 +438,7 @@
       }).join('');
       return '' +
         '<div class="hole-row' + (h.strokes === 1 ? ' hole-in-one' : '') + '">' +
-          '<div class="hole-label"><span class="hole-label-word">Hole</span><span class="hole-label-number">' + h.number + '</span></div>' +
+          '<div class="hole-label"><span class="hole-label-word">Site</span><span class="hole-label-number">' + h.number + '</span></div>' +
           '<div class="stroke-buttons">' + btns + '</div>' +
         '</div>';
     }).join('');
@@ -436,7 +458,7 @@
         '<header class="app-header">' +
           headerLeft +
           '<div class="header-info">' +
-            '<h1>' + (round.direction === 'forward' ? 'Forward · 1 → 9' : 'Backward · 9 → 1') + '</h1>' +
+            '<h1>' + roundTypeLabel(round) + '</h1>' +
             '<span class="header-sub">Started ' + formatDateTime(round.startTime) + '</span>' +
           '</div>' +
         '</header>' +
@@ -467,13 +489,23 @@
       '</div>';
   }
 
-  function startSetup() { screen = 'setup'; render(); }
+  function startSetup() { screen = 'setupType'; render(); }
+  function backToSetupType() { screen = 'setupType'; render(); }
 
-  function beginRound(direction) {
-    var order = direction === 'forward' ? [1, 2, 3, 4, 5, 6, 7, 8, 9] : [9, 8, 7, 6, 5, 4, 3, 2, 1];
+  function chooseType(type) {
+    if (type === 'chipping') { beginRound('chipping', null); return; }
+    screen = 'setupDirection';
+    render();
+  }
+
+  function beginRound(type, direction) {
+    var order = (type === 'putting' && direction === 'backward')
+      ? [9, 8, 7, 6, 5, 4, 3, 2, 1]
+      : [1, 2, 3, 4, 5, 6, 7, 8, 9];
     activeRound = {
       id: genId(),
-      direction: direction,
+      type: type,
+      direction: type === 'putting' ? direction : null,
       startTime: new Date().toISOString(),
       completedTime: null,
       holes: order.map(function (n) { return { number: n, strokes: null }; })
