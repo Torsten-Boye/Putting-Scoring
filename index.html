@@ -129,6 +129,14 @@
   .btn-primary { background: var(--primary); color: var(--primary-text); }
   .btn-secondary { background: var(--surface-alt); color: var(--text); }
   .btn-danger { background: transparent; color: var(--danger); border: 1.5px solid var(--danger); }
+  .btn:disabled { opacity: 0.4; cursor: default; }
+
+  .footer-hint {
+    margin: 0 0 10px;
+    text-align: center;
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
 
   .setup-prompt {
     text-align: center;
@@ -447,11 +455,13 @@
       ? '<button class="btn-icon" onclick="backToList()" aria-label="Close">✕</button>'
       : '';
 
+    var allFilled = s.scoredCount === round.holes.length;
+
     var footerActions = readOnly
       ? ('<button class="btn btn-danger" onclick="confirmDeleteCompleted(\'' + round.id + '\')">Delete</button>' +
          '<button class="btn btn-primary" onclick="backToList()">Close</button>')
       : ('<button class="btn btn-danger" onclick="confirmDeleteActive()">Delete</button>' +
-         '<button class="btn btn-primary" onclick="confirmComplete()">Complete</button>');
+         '<button class="btn btn-primary"' + (allFilled ? '' : ' disabled') + ' onclick="confirmComplete()">Complete</button>');
 
     return '' +
       '<div class="screen">' +
@@ -471,6 +481,7 @@
             '<div class="summary-item"><span class="summary-value">' + s.total + '</span><span class="summary-label">Strokes</span></div>' +
             '<div class="summary-item"><span class="summary-value ' + diffClass(s.diff) + '">' + diffLabel(s.diff) + '</span><span class="summary-label">Par</span></div>' +
           '</div>' +
+          (!readOnly && !allFilled ? '<p class="footer-hint">Fill in all ' + round.holes.length + ' sites to complete</p>' : '') +
           '<div class="footer-actions">' + footerActions + '</div>' +
         '</footer>' +
       '</div>';
@@ -523,6 +534,9 @@
   }
 
   function confirmComplete() {
+    if (!activeRound) return;
+    var s = summarize(activeRound);
+    if (s.scoredCount < activeRound.holes.length) return;
     showConfirm('Complete this round and save it?', doComplete);
   }
   function doComplete() {
