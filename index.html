@@ -208,8 +208,8 @@
   }
   .stroke-buttons {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 6px;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 5px;
     flex: 1;
   }
   .stroke-btn {
@@ -409,7 +409,7 @@
   function renderRound(round, readOnly) {
     var s = summarize(round);
     var holesHtml = round.holes.map(function (h, idx) {
-      var btns = [1, 2, 3, 4, 5].map(function (n) {
+      var btns = [1, 2, 3, 4, 5, 6].map(function (n) {
         var selected = h.strokes === n;
         var attrs = readOnly ? 'disabled' : ('onclick="setStrokes(' + idx + ', ' + n + ')"');
         return '<button class="stroke-btn' + (selected ? ' selected' : '') + '" ' + attrs + '>' + n + '</button>';
