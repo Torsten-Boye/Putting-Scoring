@@ -194,11 +194,16 @@
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 10px;
-    padding: 5px 8px;
+    padding: 8px 10px;
+    width: 100%;
+    text-align: left;
+    font: inherit;
+    color: var(--text);
+    cursor: pointer;
   }
   .hole-row.hole-in-one {
     border: 2px solid var(--primary);
-    padding: 4px 7px;
+    padding: 7px 9px;
   }
   .hole-label {
     display: flex;
@@ -222,35 +227,106 @@
     font-weight: 700;
     color: var(--text);
   }
-  .stroke-buttons {
-    display: grid;
-    grid-template-columns: repeat(6, 1fr);
-    gap: 4px;
+  .hole-status {
     flex: 1;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-secondary);
   }
-  .stroke-btn {
+  .hole-row.hole-in-one .hole-status,
+  .hole-status.status-done { color: var(--text); }
+  .hole-chevron {
+    color: var(--text-secondary);
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  .site-section-label {
+    margin: 14px 0 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .choice-grid { display: grid; gap: 6px; }
+  .choice-grid-2 { grid-template-columns: repeat(2, 1fr); }
+  .choice-grid-3 { grid-template-columns: repeat(3, 1fr); }
+  .choice-grid-4 { grid-template-columns: repeat(4, 1fr); }
+  .choice-grid-5 { grid-template-columns: repeat(5, 1fr); }
+  .choice-btn {
     appearance: none;
     border: 1.5px solid var(--border);
     background: var(--surface-alt);
     color: var(--text);
-    border-radius: 8px;
-    height: 38px;
-    font-size: 15px;
+    border-radius: 10px;
+    height: 46px;
+    padding: 0 2px;
+    font-size: 13px;
     font-weight: 700;
     cursor: pointer;
   }
-  .stroke-btn.selected {
+  .choice-btn.selected {
     background: var(--selected-bg);
     border-color: var(--selected-bg);
     color: var(--selected-text);
   }
-  .stroke-btn:disabled {
-    opacity: 1;
-    cursor: default;
+  .choice-btn:disabled { opacity: 0.4; cursor: default; }
+  .choice-btn-holed { border-color: var(--primary); color: var(--primary); }
+
+  .shot-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 6px; }
+  .shot-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 14px;
+    font-size: 14px;
   }
-  .stroke-btn:disabled:not(.selected) {
-    opacity: 0.4;
+  .shot-index { font-weight: 700; color: var(--text-secondary); min-width: 50px; }
+  .interval-back-btn { margin-top: 10px; }
+
+  .data-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 16px;
   }
+  .data-summary-row { display: flex; justify-content: space-between; font-size: 14px; }
+  .data-summary-row span:first-child { color: var(--text-secondary); }
+  .data-summary-row span:last-child { font-weight: 600; }
+
+  .data-table-wrap {
+    overflow-x: auto;
+    margin-bottom: 16px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+  .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .data-table th, .data-table td {
+    padding: 8px 10px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  .data-table th {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--text-secondary);
+    font-weight: 600;
+    background: var(--surface-alt);
+  }
+  .data-table tbody tr:last-child td { border-bottom: none; }
+  .shot-club { flex: 1; text-align: center; color: var(--text-secondary); }
+  .shot-outcome { font-weight: 600; text-align: right; }
 
   .round-footer {
     padding-top: 6px;
@@ -305,6 +381,10 @@
   var STORAGE_KEY = 'puttingRounds_v1';
   var ACTIVE_KEY = 'puttingActiveRound_v1';
   var PAR_PER_HOLE = 2;
+  var CHIP_CLUBS = ['PW', 'GW', 'SW', 'LW', 'Putter'];
+  var CONTACT_OPTIONS = ['Clean', 'Fat', 'Thin'];
+  var PUTT_INTERVALS = ['>3m', '1.5–3m', '0.5–1.5m', '<0.5m'];
+  var CHIP_INTERVALS = ['>6m', '3–6m', '1.5–3m', '0.5–1.5m', '<0.5m'];
 
   function loadRounds() {
     try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
@@ -325,17 +405,33 @@
   var screen = activeRound ? 'active' : 'list';
   var viewingId = null;
   var confirmState = null;
+  var siteContext = null;
+  var pendingClub = null;
+  var pendingContact = null;
+  var pendingOutcome = null;
+  var dataRoundId = null;
+
+  function isHoleScored(h) {
+    if (h.shots) return h.shots.length > 0 && h.shots[h.shots.length - 1].outcome === 'holed';
+    return h.strokes != null;
+  }
+  function holeStrokes(h) {
+    if (h.shots) return h.shots.length;
+    return h.strokes;
+  }
 
   function summarize(round) {
-    var scored = round.holes.filter(function (h) { return h.strokes != null; });
-    var total = scored.reduce(function (s, h) { return s + h.strokes; }, 0);
-    var parSoFar = scored.length * PAR_PER_HOLE;
-    return { scoredCount: scored.length, total: total, diff: total - parSoFar };
+    var scoredHoles = round.holes.filter(isHoleScored);
+    var total = scoredHoles.reduce(function (s, h) { return s + holeStrokes(h); }, 0);
+    var parSoFar = scoredHoles.length * PAR_PER_HOLE;
+    return { scoredCount: scoredHoles.length, total: total, diff: total - parSoFar };
   }
 
   function countAces(round) {
-    return round.holes.filter(function (h) { return h.strokes === 1; }).length;
+    return round.holes.filter(function (h) { return isHoleScored(h) && holeStrokes(h) === 1; }).length;
   }
+
+  function capitalize(str) { return str.charAt(0).toUpperCase() + str.slice(1); }
 
   function diffClass(diff) {
     if (diff < 0) return 'diff-under';
@@ -372,6 +468,8 @@
       var r = rounds.find(function (x) { return x.id === viewingId; });
       html = r ? renderRound(r, true) : renderList();
     }
+    else if (screen === 'site') html = renderSite();
+    else if (screen === 'roundData') html = renderRoundData();
     var prevScroll = app.querySelector('.scroll-area');
     var scrollTop = prevScroll ? prevScroll.scrollTop : 0;
     app.innerHTML = html + (confirmState ? renderConfirm() : '');
@@ -451,26 +549,33 @@
   function renderRound(round, readOnly) {
     var s = summarize(round);
     var holesHtml = round.holes.map(function (h, idx) {
-      var btns = [1, 2, 3, 4, 5, 6].map(function (n) {
-        var selected = h.strokes === n;
-        var attrs = readOnly ? 'disabled' : ('onclick="setStrokes(' + idx + ', ' + n + ')"');
-        return '<button class="stroke-btn' + (selected ? ' selected' : '') + '" ' + attrs + '>' + n + '</button>';
-      }).join('');
+      var scored = isHoleScored(h);
+      var strokes = holeStrokes(h);
+      var shotCount = h.shots ? h.shots.length : 0;
+      var statusText;
+      if (scored) statusText = strokes + (strokes === 1 ? ' shot' : ' shots');
+      else if (shotCount > 0) statusText = shotCount + ' logged…';
+      else statusText = 'Not started';
+
+      var openFn = readOnly ? ("openSiteView('" + round.id + "', " + idx + ')') : ('openSite(' + idx + ')');
+
       return '' +
-        '<div class="hole-row' + (h.strokes === 1 ? ' hole-in-one' : '') + '">' +
+        '<button class="hole-row' + (scored && strokes === 1 ? ' hole-in-one' : '') + '" onclick="' + openFn + '">' +
           '<div class="hole-label"><span class="hole-label-word">Site</span><span class="hole-label-number">' + h.number + '</span></div>' +
-          '<div class="stroke-buttons">' + btns + '</div>' +
-        '</div>';
+          '<div class="hole-status' + (scored ? ' status-done' : '') + '">' + statusText + '</div>' +
+          '<div class="hole-chevron">›</div>' +
+        '</button>';
     }).join('');
 
     var headerLeft = readOnly
       ? '<button class="btn-icon" onclick="backToList()" aria-label="Close">✕</button>'
       : '';
 
-    var allFilled = s.scoredCount === round.holes.length;
+    var allFilled = round.holes.every(isHoleScored);
 
     var footerActions = readOnly
       ? ('<button class="btn btn-danger" onclick="confirmDeleteCompleted(\'' + round.id + '\')">Delete</button>' +
+         '<button class="btn btn-secondary" onclick="openRoundData(\'' + round.id + '\')">Data</button>' +
          '<button class="btn btn-primary" onclick="backToList()">Close</button>')
       : ('<button class="btn btn-danger" onclick="confirmDeleteActive()">Delete</button>' +
          '<button class="btn btn-primary"' + (allFilled ? '' : ' disabled') + ' onclick="confirmComplete()">Complete</button>');
@@ -495,6 +600,60 @@
           '</div>' +
           (!readOnly && !allFilled ? '<p class="footer-hint">Fill in all ' + round.holes.length + ' sites to complete</p>' : '') +
           '<div class="footer-actions">' + footerActions + '</div>' +
+        '</footer>' +
+      '</div>';
+  }
+
+  function openRoundData(id) { dataRoundId = id; screen = 'roundData'; render(); }
+  function closeRoundData() { screen = 'view'; dataRoundId = null; render(); }
+
+  function renderRoundData() {
+    var round = rounds.find(function (r) { return r.id === dataRoundId; });
+    if (!round) { screen = 'list'; return renderList(); }
+    var s = summarize(round);
+    var isChipping = (round.type || 'putting') === 'chipping';
+    var siteColumnLabel = isChipping ? 'Site' : 'Hole';
+    var columnCount = isChipping ? 5 : 4;
+
+    var rows = [];
+    round.holes.forEach(function (h) {
+      if (h.shots && h.shots.length) {
+        h.shots.forEach(function (sh, i) {
+          var result = sh.outcome === 'holed' ? 'Holed' : (capitalize(sh.outcome) + ' · ' + sh.interval);
+          rows.push('<tr><td>' + h.number + '</td><td>' + (i + 1) + '</td><td>' + sh.club + '</td>' +
+            (isChipping ? '<td>' + (sh.contact || '—') + '</td>' : '') +
+            '<td>' + result + '</td></tr>');
+        });
+      } else if (h.strokes != null) {
+        rows.push('<tr><td>' + h.number + '</td><td colspan="' + (columnCount - 1) + '">' + h.strokes + (h.strokes === 1 ? ' stroke' : ' strokes') + ' (legacy)</td></tr>');
+      }
+    });
+
+    var summaryHtml = '' +
+      '<div class="data-summary">' +
+        '<div class="data-summary-row"><span>Type</span><span>' + roundTypeLabel(round) + '</span></div>' +
+        '<div class="data-summary-row"><span>Started</span><span>' + formatDateTime(round.startTime) + '</span></div>' +
+        '<div class="data-summary-row"><span>Completed</span><span>' + (round.completedTime ? formatDateTime(round.completedTime) : '—') + '</span></div>' +
+        '<div class="data-summary-row"><span>Sites scored</span><span>' + s.scoredCount + '/' + round.holes.length + '</span></div>' +
+        '<div class="data-summary-row"><span>Total strokes</span><span>' + s.total + '</span></div>' +
+        '<div class="data-summary-row"><span>Vs. par</span><span class="' + diffClass(s.diff) + '">' + diffLabel(s.diff) + '</span></div>' +
+      '</div>';
+
+    var tableHtml = rows.length
+      ? ('<div class="data-table-wrap"><table class="data-table"><thead><tr><th>' + siteColumnLabel + '</th><th>Shot</th><th>Club</th>' +
+          (isChipping ? '<th>Contact</th>' : '') +
+          '<th>Result</th></tr></thead><tbody>' + rows.join('') + '</tbody></table></div>')
+      : '<p class="empty-state">No shot data recorded.</p>';
+
+    return '' +
+      '<div class="screen">' +
+        '<header class="app-header round-header"><h1>Round Data</h1></header>' +
+        '<main class="scroll-area">' +
+          summaryHtml +
+          tableHtml +
+        '</main>' +
+        '<footer class="app-footer">' +
+          '<button class="btn btn-primary btn-block" onclick="closeRoundData()">Close</button>' +
         '</footer>' +
       '</div>';
   }
@@ -531,18 +690,191 @@
       direction: type === 'putting' ? direction : null,
       startTime: new Date().toISOString(),
       completedTime: null,
-      holes: order.map(function (n) { return { number: n, strokes: null }; })
+      holes: order.map(function (n) { return { number: n, shots: [] }; })
     };
     saveActive(activeRound);
     screen = 'active';
     render();
   }
 
-  function setStrokes(idx, n) {
-    if (!activeRound) return;
-    activeRound.holes[idx].strokes = n;
-    saveActive(activeRound);
+  function defaultsForHole(hole) {
+    if (activeRound.type === 'putting') return { club: 'Putter', contact: null };
+    var club = (hole.shots && hole.shots.length > 0) ? 'Putter' : 'LW';
+    return { club: club, contact: club === 'Putter' ? 'Clean' : null };
+  }
+
+  function openSite(idx) {
+    siteContext = { roundId: null, idx: idx, readOnly: false };
+    var d = defaultsForHole(activeRound.holes[idx]);
+    pendingClub = d.club;
+    pendingContact = d.contact;
+    pendingOutcome = null;
+    screen = 'site';
     render();
+  }
+
+  function openSiteView(roundId, idx) {
+    siteContext = { roundId: roundId, idx: idx, readOnly: true };
+    screen = 'site';
+    render();
+  }
+
+  function closeSite() {
+    screen = siteContext && siteContext.readOnly ? 'view' : 'active';
+    siteContext = null;
+    render();
+  }
+
+  function selectClub(club) {
+    pendingClub = club;
+    pendingContact = club === 'Putter' ? 'Clean' : null;
+    render();
+  }
+
+  function selectContact(contact) {
+    pendingContact = contact;
+    render();
+  }
+
+  function selectOutcome(outcome) {
+    if (outcome === 'holed') { logShot('holed', null); return; }
+    pendingOutcome = outcome;
+    render();
+  }
+
+  function cancelOutcome() {
+    pendingOutcome = null;
+    render();
+  }
+
+  function selectInterval(interval) {
+    logShot(pendingOutcome, interval);
+  }
+
+  function logShot(outcome, interval) {
+    var hole = activeRound.holes[siteContext.idx];
+    if (!hole.shots) hole.shots = [];
+    hole.shots.push({ club: pendingClub, contact: pendingContact, outcome: outcome, interval: interval });
+    saveActive(activeRound);
+    resetPendingShot();
+    render();
+  }
+
+  function undoLastShot() {
+    var hole = activeRound.holes[siteContext.idx];
+    if (!hole.shots || !hole.shots.length) return;
+    hole.shots.pop();
+    saveActive(activeRound);
+    var d = defaultsForHole(hole);
+    pendingOutcome = null;
+    pendingClub = d.club;
+    pendingContact = d.contact;
+    render();
+  }
+
+  function resetPendingShot() {
+    pendingOutcome = null;
+    pendingClub = 'Putter';
+    pendingContact = activeRound.type === 'chipping' ? 'Clean' : null;
+  }
+
+  function renderSite() {
+    var round = siteContext.roundId ? rounds.find(function (r) { return r.id === siteContext.roundId; }) : activeRound;
+    if (!round) { screen = 'list'; return renderList(); }
+    var hole = round.holes[siteContext.idx];
+    var shots = hole.shots || [];
+    var readOnly = siteContext.readOnly;
+    var holedAlready = shots.length > 0 && shots[shots.length - 1].outcome === 'holed';
+
+    var shotsHtml = shots.map(function (sh, i) {
+      var desc = sh.outcome === 'holed' ? 'Holed' : (capitalize(sh.outcome) + ' · ' + sh.interval);
+      var clubText = sh.contact ? (sh.club + ' · ' + sh.contact) : sh.club;
+      return '' +
+        '<div class="shot-row">' +
+          '<span class="shot-index">Shot ' + (i + 1) + '</span>' +
+          '<span class="shot-club">' + clubText + '</span>' +
+          '<span class="shot-outcome">' + desc + '</span>' +
+        '</div>';
+    }).join('');
+
+    var legacyNote = (!hole.shots && hole.strokes != null)
+      ? '<p class="empty-state">Logged as ' + hole.strokes + (hole.strokes === 1 ? ' stroke' : ' strokes') + ' before shot tracking was added.</p>'
+      : '';
+
+    var logFormHtml = '';
+    if (!readOnly && !holedAlready) {
+      var isChipping = round.type === 'chipping';
+      var clubHtml = '';
+      if (isChipping) {
+        clubHtml = '<p class="site-section-label">Club</p><div class="choice-grid choice-grid-5">' +
+          CHIP_CLUBS.map(function (c) {
+            return '<button class="choice-btn' + (pendingClub === c ? ' selected' : '') + '" onclick="selectClub(\'' + c + '\')">' + c + '</button>';
+          }).join('') + '</div>';
+      } else {
+        clubHtml = '<p class="site-section-label">Club</p><p class="hole-status status-done">Putter</p>';
+      }
+
+      var contactHtml = '';
+      if (isChipping) {
+        if (pendingClub === 'Putter') {
+          contactHtml = '<p class="site-section-label">Contact</p><p class="hole-status status-done">Clean</p>';
+        } else {
+          contactHtml = '<p class="site-section-label">Contact</p><div class="choice-grid choice-grid-3">' +
+            CONTACT_OPTIONS.map(function (c) {
+              return '<button class="choice-btn' + (pendingContact === c ? ' selected' : '') + '" onclick="selectContact(\'' + c + '\')">' + c + '</button>';
+            }).join('') + '</div>';
+        }
+      }
+
+      var canPickOutcome = !isChipping || (!!pendingClub && !!pendingContact);
+      var outcomeHtml;
+      if (pendingOutcome === null) {
+        outcomeHtml = '<p class="site-section-label">Result</p><div class="choice-grid choice-grid-3">' +
+          '<button class="choice-btn choice-btn-holed"' + (canPickOutcome ? '' : ' disabled') + ' onclick="selectOutcome(\'holed\')">Holed</button>' +
+          '<button class="choice-btn"' + (canPickOutcome ? '' : ' disabled') + ' onclick="selectOutcome(\'short\')">Short</button>' +
+          '<button class="choice-btn"' + (canPickOutcome ? '' : ' disabled') + ' onclick="selectOutcome(\'long\')">Long</button>' +
+          '</div>';
+      } else {
+        var intervals = isChipping ? CHIP_INTERVALS : PUTT_INTERVALS;
+        outcomeHtml = '<p class="site-section-label">Distance ' + pendingOutcome + '</p>' +
+          '<div class="choice-grid choice-grid-2">' +
+            intervals.map(function (iv) {
+              return '<button class="choice-btn" onclick="selectInterval(\'' + iv + '\')">' + iv + '</button>';
+            }).join('') +
+          '</div>' +
+          '<button class="btn btn-secondary btn-block interval-back-btn" onclick="cancelOutcome()">Back</button>';
+      }
+
+      logFormHtml = clubHtml + contactHtml + outcomeHtml;
+    }
+
+    var undoHtml = (!readOnly && shots.length > 0)
+      ? '<button class="btn btn-secondary btn-block" onclick="undoLastShot()">Undo Last Shot</button>'
+      : '';
+
+    var subtitle = holedAlready
+      ? ('Holed in ' + shots.length)
+      : (shots.length ? (shots.length + (shots.length === 1 ? ' shot logged' : ' shots logged')) : 'No shots yet');
+
+    return '' +
+      '<div class="screen">' +
+        '<header class="app-header round-header">' +
+          '<button class="btn-icon" onclick="closeSite()" aria-label="Back">←</button>' +
+          '<div class="header-info">' +
+            '<h1>Site ' + hole.number + '</h1>' +
+            '<span class="header-sub">' + subtitle + '</span>' +
+          '</div>' +
+        '</header>' +
+        '<main class="scroll-area">' +
+          (shots.length ? '<div class="shot-list">' + shotsHtml + '</div>' : '') +
+          legacyNote +
+          logFormHtml +
+        '</main>' +
+        '<footer class="app-footer">' +
+          undoHtml +
+          '<button class="btn btn-primary btn-block" onclick="closeSite()">' + (readOnly ? 'Close' : 'Done') + '</button>' +
+        '</footer>' +
+      '</div>';
   }
 
   function confirmComplete() {
