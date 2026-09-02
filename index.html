@@ -741,7 +741,7 @@
 
   function defaultsForHole(hole) {
     if (activeRound.type === 'putting') return { club: 'Putter', contact: null };
-    var club = (hole.shots && hole.shots.length > 0) ? 'Putter' : 'LW';
+    var club = (hole.shots && hole.shots.length > 0) ? 'Putter' : 'GW';
     return { club: club, contact: club === 'Putter' ? 'Clean' : null };
   }
 
@@ -814,6 +814,14 @@
     render();
   }
 
+  function holeAndDone() {
+    if (!activeRound) return;
+    var isChipping = activeRound.type === 'chipping';
+    if (isChipping && (!pendingClub || !pendingContact)) return;
+    logShot('holed', null);
+    closeSite();
+  }
+
   function resetPendingShot() {
     pendingOutcome = null;
     pendingClub = 'Putter';
@@ -827,6 +835,7 @@
     var shots = hole.shots || [];
     var readOnly = siteContext.readOnly;
     var holedAlready = shots.length > 0 && shots[shots.length - 1].outcome === 'holed';
+    var isChipping = round.type === 'chipping';
 
     var shotsHtml = shots.map(function (sh, i) {
       var desc = sh.outcome === 'holed' ? 'Holed' : (capitalize(sh.outcome) + ' · ' + sh.interval);
@@ -845,7 +854,6 @@
 
     var logFormHtml = '';
     if (!readOnly && !holedAlready) {
-      var isChipping = round.type === 'chipping';
       var clubHtml = '';
       if (isChipping) {
         clubHtml = '<p class="site-section-label">Club</p><div class="choice-grid choice-grid-5">' +
@@ -894,6 +902,12 @@
       ? '<button class="btn btn-secondary btn-block" onclick="undoLastShot()">Undo Last Shot</button>'
       : '';
 
+    var showHoleAndDone = !readOnly && !holedAlready;
+    var canHoleAndDone = !isChipping || (!!pendingClub && !!pendingContact);
+    var doneLabel = readOnly ? 'Close' : (showHoleAndDone ? 'Holed and Done' : 'Done');
+    var doneOnclick = readOnly ? 'closeSite()' : (showHoleAndDone ? 'holeAndDone()' : 'closeSite()');
+    var doneDisabled = showHoleAndDone && !canHoleAndDone;
+
     var subtitle = holedAlready
       ? ('Holed in ' + shots.length)
       : (shots.length ? (shots.length + (shots.length === 1 ? ' shot logged' : ' shots logged')) : 'No shots yet');
@@ -914,7 +928,7 @@
         '</main>' +
         '<footer class="app-footer">' +
           undoHtml +
-          '<button class="btn btn-primary btn-block" onclick="closeSite()">' + (readOnly ? 'Close' : 'Done') + '</button>' +
+          '<button class="btn btn-primary btn-block"' + (doneDisabled ? ' disabled' : '') + ' onclick="' + doneOnclick + '">' + doneLabel + '</button>' +
         '</footer>' +
       '</div>';
   }
