@@ -400,8 +400,28 @@
 
   function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
 
+  function migrateRound(round) {
+    var changed = false;
+    if (!round.course) {
+      var type = round.type || 'putting';
+      if (type === 'chipping') round.course = 'Odder chipping range';
+      else round.course = round.direction === 'backward' ? 'Odder putting range backwards' : 'Odder putting range forwards';
+      changed = true;
+    }
+    if (Object.prototype.hasOwnProperty.call(round, 'direction')) {
+      delete round.direction;
+      changed = true;
+    }
+    return changed;
+  }
+
   var rounds = loadRounds();
+  var roundsMigrated = false;
+  rounds.forEach(function (r) { if (migrateRound(r)) roundsMigrated = true; });
+  if (roundsMigrated) saveRounds(rounds);
+
   var activeRound = loadActive();
+  if (activeRound && migrateRound(activeRound)) saveActive(activeRound);
   var screen = activeRound ? 'active' : 'list';
   var viewingId = null;
   var confirmState = null;
@@ -511,9 +531,7 @@
   }
 
   function roundTypeLabel(round) {
-    var type = round.type || 'putting';
-    if (type === 'chipping') return 'Chipping';
-    return 'Putting · ' + (round.direction === 'backward' ? 'Backward · 9 → 1' : 'Forward · 1 → 9');
+    return round.course || 'Training round';
   }
 
   function renderSetupType() {
@@ -607,6 +625,24 @@
   function openRoundData(id) { dataRoundId = id; screen = 'roundData'; render(); }
   function closeRoundData() { screen = 'view'; dataRoundId = null; render(); }
 
+  function exportRoundData(id) {
+    var round = rounds.find(function (r) { return r.id === id; });
+    if (!round) return;
+    var json = JSON.stringify(round, null, 2);
+    var blob = new Blob([json], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var type = round.type || 'putting';
+    var datePart = (round.startTime || '').slice(0, 10);
+    var filename = type + '-' + datePart + '-' + round.id.slice(0, 6) + '.json';
+    var link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
+
   function renderRoundData() {
     var round = rounds.find(function (r) { return r.id === dataRoundId; });
     if (!round) { screen = 'list'; return renderList(); }
@@ -653,7 +689,10 @@
           tableHtml +
         '</main>' +
         '<footer class="app-footer">' +
-          '<button class="btn btn-primary btn-block" onclick="closeRoundData()">Close</button>' +
+          '<div class="footer-actions">' +
+            '<button class="btn btn-secondary" onclick="exportRoundData(\'' + round.id + '\')">Export</button>' +
+            '<button class="btn btn-primary" onclick="closeRoundData()">Close</button>' +
+          '</div>' +
         '</footer>' +
       '</div>';
   }
@@ -684,10 +723,13 @@
     var order = (type === 'putting' && direction === 'backward')
       ? [9, 8, 7, 6, 5, 4, 3, 2, 1]
       : [1, 2, 3, 4, 5, 6, 7, 8, 9];
+    var course = type === 'chipping'
+      ? 'Odder chipping range'
+      : (direction === 'backward' ? 'Odder putting range backwards' : 'Odder putting range forwards');
     activeRound = {
       id: genId(),
       type: type,
-      direction: type === 'putting' ? direction : null,
+      course: course,
       startTime: new Date().toISOString(),
       completedTime: null,
       holes: order.map(function (n) { return { number: n, shots: [] }; })
